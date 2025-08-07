@@ -1,9 +1,10 @@
+require("dotenv").config();
 const { translate } = require("@vitalets/google-translate-api");
 const TelegramBot = require("node-telegram-bot-api");
 const axios = require("axios");
 const horoscopes = require("../data/horoscopes.json");
 
-const TOKEN = "8479088966:AAECfzmcwhHBFhq5KLcZPJpynPLAIx67uMc";
+const TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 const SIGNS = [
