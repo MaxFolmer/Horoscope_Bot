@@ -3,6 +3,8 @@ const { translate } = require("@vitalets/google-translate-api");
 const TelegramBot = require("node-telegram-bot-api");
 const axios = require("axios");
 const horoscopes = require("../data/horoscopes.json");
+const cron = require("node-cron");
+const { exec } = require("child_process");
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(TOKEN, { polling: true });
@@ -189,3 +191,17 @@ setInterval(async () => {
     }
   }
 }, 86400 * 1000); //
+
+// Автообновление гороскопов каждый день в 00:05 по Москве
+cron.schedule(
+  "5 0 * * *",
+  () => {
+    exec("node scripts/update_horoscopes.js", (err, stdout, stderr) => {
+      if (err) console.error("Ошибка автообновления гороскопов:", err);
+      else console.log("Гороскопы успешно обновлены:", stdout);
+    });
+  },
+  {
+    timezone: "Europe/Moscow",
+  }
+);
