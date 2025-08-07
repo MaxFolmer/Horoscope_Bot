@@ -1,5 +1,6 @@
 const TelegramBot = require("node-telegram-bot-api");
 const axios = require("axios");
+const { translate } = require("@vitalets/google-translate-api");
 
 const TOKEN = "8479088966:AAECfzmcwhHBFhq5KLcZPJpynPLAIx67uMc";
 const bot = new TelegramBot(TOKEN, { polling: true });
@@ -33,13 +34,34 @@ function getSignsKeyboard() {
   return { inline_keyboard: rows };
 }
 
+async function translateToRussian(text) {
+  try {
+    const res = await translate(text, { to: "ru" });
+    console.log("Перевод:", res.text);
+    return res.text;
+  } catch (e) {
+    console.log("Ошибка перевода:", e.message);
+    return text;
+  }
+}
+
 async function getHoroscope(sign) {
   try {
-    const res =
-      await axios.post(`https://aztro.sameerkumar.website?sign=aries&day=today
-`);
-    return res.data.description;
+    const res = await axios.get(`https://ohmanda.com/api/horoscope/${sign}/`);
+    console.log("Ответ от ohmanda:", res.data);
+    if (!res.data || !res.data.horoscope) {
+      return "Гороскоп не найден.";
+    }
+    const original = res.data.horoscope;
+    const translated = await translateToRussian(original);
+    console.log("Оригинал:", original);
+    console.log("Перевод:", translated);
+    return translated || original;
   } catch (e) {
+    console.log(
+      "Ошибка запроса к API:",
+      e.response ? e.response.data : e.message
+    );
     return "Ошибка при получении гороскопа.";
   }
 }
@@ -54,13 +76,28 @@ bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id;
   const sign = query.data;
 
+  // Сразу отвечаем на callback_query
+  bot.answerCallbackQuery(query.id);
+
   if (sign === "all") {
-    let text = "";
+    let texts = [];
     for (const s of SIGNS) {
       const desc = await getHoroscope(s.value);
-      text += `*${s.name}*: ${desc}\n\n`;
+      texts.push(`*${s.name}*: ${desc}`);
     }
-    bot.sendMessage(chatId, text, { parse_mode: "Markdown" });
+    // Разбиваем на сообщения по 3500 символов (чтобы не превышать лимит Telegram)
+    let message = "";
+    for (const t of texts) {
+      if ((message + "\n\n" + t).length > 3500) {
+        await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
+        message = t;
+      } else {
+        message += (message ? "\n\n" : "") + t;
+      }
+    }
+    if (message) {
+      await bot.sendMessage(chatId, message, { parse_mode: "Markdown" });
+    }
   } else {
     const signObj = SIGNS.find((s) => s.value === sign);
     const desc = await getHoroscope(sign);
@@ -68,5 +105,4 @@ bot.on("callback_query", async (query) => {
       parse_mode: "Markdown",
     });
   }
-  bot.answerCallbackQuery(query.id);
 });
