@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dotenv": "^16.3.1",
     "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.11.0",
     "cheerio": "^1.1.2",
