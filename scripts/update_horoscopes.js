@@ -2,6 +2,7 @@ require("dotenv").config();
 const axios = require("axios");
 const cheerio = require("cheerio");
 const fs = require("fs");
+const path = require("path");
 
 const SIGNS = {
   aries: "oven",
@@ -42,9 +43,10 @@ async function fetchHoroscope(slug) {
       console.log(`Ошибка для ${sign}:`, e.message);
     }
   }
-  if (!fs.existsSync("./data")) fs.mkdirSync("./data");
+  const dataDir = path.join(__dirname, "../data");
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   fs.writeFileSync(
-    "./data/horoscopes.json",
+    path.join(dataDir, "horoscopes.json"),
     JSON.stringify(result, null, 2),
     "utf8"
   );

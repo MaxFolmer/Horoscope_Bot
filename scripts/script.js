@@ -1,15 +1,18 @@
 require("dotenv").config();
-const { translate } = require("@vitalets/google-translate-api");
 const TelegramBot = require("node-telegram-bot-api");
-const axios = require("axios");
 const horoscopes = require("../data/horoscopes.json");
 const cron = require("node-cron");
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new TelegramBot(TOKEN, { polling: true });
+const ADMIN_ID = 700953345;
+
+function isAdmin(userId) {
+  return String(userId) === String(ADMIN_ID);
+}
 
 const SIGNS = [
   { name: "Овен", value: "aries" },
@@ -77,7 +80,7 @@ function getSignsKeyboard(prefix = "setsign_") {
 
 function getTimeKeyboard() {
   const times = [
-    "00:10",
+    "01:00",
     "07:00",
     "08:00",
     "09:00",
@@ -122,23 +125,8 @@ function getMenuKeyboard() {
   };
 }
 
-async function translateToRussian(text) {
-  try {
-    const res = await translate(text, { to: "ru", client: "gtx", tld: "com" });
-    console.log("Перевод:", res.text);
-    return res.text;
-  } catch (e) {
-    console.log("Ошибка перевода:", e.message);
-    return text;
-  }
-}
-
 function getHoroscope(sign) {
   return horoscopes[sign] || "Гороскоп не найден!";
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // /start
@@ -276,6 +264,10 @@ bot.onText(/\/unsubscribe/, (msg) => {
 
 // /stats - статистика пользователей (для админа)
 bot.onText(/\/stats/, (msg) => {
+  if (!isAdmin(msg.from.id)) {
+    bot.sendMessage(msg.chat.id, "❌ Доступ запрещён");
+    return;
+  }
   const totalUsers = Object.keys(users).length;
   const subscribedUsers = Object.values(users).filter(
     (user) => user.subscribed
@@ -289,11 +281,16 @@ bot.onText(/\/stats/, (msg) => {
   bot.sendMessage(msg.chat.id, stats);
 });
 
-// /test-update - тестовая команда для проверки автообновления
+// /test-update - тестовая команда для проверки автообновления (только админ)
 bot.onText(/\/test-update/, (msg) => {
+  if (!isAdmin(msg.from.id)) {
+    bot.sendMessage(msg.chat.id, "❌ Доступ запрещён");
+    return;
+  }
   console.log("Тестовый запуск обновления гороскопов...");
-  exec(
-    "node update_horoscopes.js",
+  execFile(
+    process.execPath,
+    [path.join(__dirname, "update_horoscopes.js")],
     { cwd: __dirname },
     (err, stdout, stderr) => {
       if (err) {
@@ -390,13 +387,14 @@ function scheduleUserNotifications() {
 // Запускаем расписание при старте
 scheduleUserNotifications();
 
-// Автообновление гороскопов каждый день в 00:05 по Москве
+// Автообновление гороскопов каждый день в 00:30 по Москве
 cron.schedule(
-  "5 0 * * *",
+  "30 0 * * *",
   () => {
     console.log("Запуск автообновления гороскопов...");
-    exec(
-      "node update_horoscopes.js",
+    execFile(
+      process.execPath,
+      [path.join(__dirname, "update_horoscopes.js")],
       { cwd: __dirname },
       (err, stdout, stderr) => {
         if (err) {
@@ -420,4 +418,4 @@ cron.schedule(
   }
 );
 
-console.log("Автообновление гороскопов настроено на 00:05 по Москве");
+console.log("Автообновление гороскопов настроено на 00:30 по Москве");
