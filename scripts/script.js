@@ -141,10 +141,11 @@ bot.onText(/\/start/, (msg) => {
 
 // /help
 bot.onText(/\/help/, (msg) => {
-  bot.sendMessage(
-    msg.chat.id,
-    `Доступные команды:\n\n/start — начать работу\n/help — список команд\n/today — гороскоп на сегодня для вашего знака\n/setmyhoroscope — выбрать свой знак зодиака\n/settime — установить время уведомлений\n/subscribe — подписаться на ежедневную рассылку\n/unsubscribe — отменить подписку\n/menu — показать меню с кнопками\n/test-update — тест обновления гороскопов (для админа)\n/stats — статистика пользователей (для админа)`
-  );
+  const baseHelp = `Доступные команды:\n\n/start — начать работу\n/help — список команд\n/today — гороскоп на сегодня для вашего знака\n/setmyhoroscope — выбрать свой знак зодиака\n/settime — установить время уведомлений\n/subscribe — подписаться на ежедневную рассылку\n/unsubscribe — отменить подписку\n/menu — показать меню с кнопками`;
+  const adminHelp = isAdmin(msg.from.id)
+    ? `\n/test-update — тест обновления гороскопов (для админа)\n/stats — статистика пользователей (для админа)`
+    : "";
+  bot.sendMessage(msg.chat.id, baseHelp + adminHelp);
 });
 
 // /menu
