@@ -1,3 +1,5 @@
 .env
 node_modules/
 data/users.json
+*.code-workspace
+.DS_Store
