@@ -143,7 +143,7 @@ bot.onText(/\/start/, (msg) => {
 bot.onText(/\/help/, (msg) => {
   const baseHelp = `Доступные команды:\n\n/start — начать работу\n/help — список команд\n/today — гороскоп на сегодня для вашего знака\n/setmyhoroscope — выбрать свой знак зодиака\n/settime — установить время уведомлений\n/subscribe — подписаться на ежедневную рассылку\n/unsubscribe — отменить подписку\n/menu — показать меню с кнопками`;
   const adminHelp = isAdmin(msg.from.id)
-    ? `\n/test-update — тест обновления гороскопов (для админа)\n/stats — статистика пользователей (для админа)`
+    ? `\n/stats — статистика пользователей (для админа)`
     : "";
   bot.sendMessage(msg.chat.id, baseHelp + adminHelp);
 });
@@ -282,40 +282,7 @@ bot.onText(/\/stats/, (msg) => {
   bot.sendMessage(msg.chat.id, stats);
 });
 
-// /test-update - тестовая команда для проверки автообновления (только админ)
-bot.onText(/\/test-update/, (msg) => {
-  if (!isAdmin(msg.from.id)) {
-    bot.sendMessage(msg.chat.id, "❌ Доступ запрещён");
-    return;
-  }
-  console.log("Тестовый запуск обновления гороскопов...");
-  execFile(
-    process.execPath,
-    [path.join(__dirname, "update_horoscopes.js")],
-    { cwd: __dirname },
-    (err, stdout, stderr) => {
-      if (err) {
-        console.error("Ошибка тестового обновления:", err);
-        bot.sendMessage(msg.chat.id, "❌ Ошибка обновления: " + err.message);
-      } else {
-        console.log("Тестовое обновление успешно:", stdout);
-        // Перезагружаем данные в памяти
-        try {
-          delete require.cache[require.resolve("../data/horoscopes.json")];
-          Object.assign(horoscopes, require("../data/horoscopes.json"));
-          console.log("Данные гороскопов перезагружены в памяти");
-          bot.sendMessage(msg.chat.id, "✅ Гороскопы успешно обновлены!");
-        } catch (e) {
-          console.error("Ошибка перезагрузки данных:", e.message);
-          bot.sendMessage(
-            msg.chat.id,
-            "❌ Ошибка перезагрузки данных: " + e.message
-          );
-        }
-      }
-    }
-  );
-});
+// удалено: обработчик /test-update
 
 // /all
 bot.onText(/\/all/, async (msg) => {
