@@ -364,9 +364,13 @@ function scheduleUserNotifications() {
             const signObj = SIGNS.find((s) => s.value === user.sign);
             const desc = getHoroscope(user.sign);
             const date = getMoscowDateString();
-            await bot.sendMessage(userId, `*${signObj.name}*\n📅 ${date}\n${desc}`, {
-              parse_mode: "Markdown",
-            });
+            await bot.sendMessage(
+              userId,
+              `*${signObj.name}*\n📅 ${date}\n${desc}`,
+              {
+                parse_mode: "Markdown",
+              }
+            );
             console.log(
               `Отправлен гороскоп пользователю ${userId} в ${user.notificationTime}`
             );
