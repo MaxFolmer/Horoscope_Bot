@@ -129,9 +129,23 @@ function getHoroscope(sign) {
   return horoscopes[sign] || "Гороскоп не найден!";
 }
 
+function getMoscowDateString() {
+  try {
+    return new Date().toLocaleDateString("ru-RU", {
+      timeZone: "Europe/Moscow",
+    });
+  } catch (_) {
+    return new Date().toLocaleDateString("ru-RU");
+  }
+}
+
 // /start
 bot.onText(/\/start/, (msg) => {
   users[msg.from.id] = users[msg.from.id] || { sign: null, subscribed: false };
+  if (msg.from && msg.from.username) {
+    users[msg.from.id].username = msg.from.username;
+    saveUsers();
+  }
   bot.sendMessage(
     msg.chat.id,
     "Добро пожаловать в бота-гороскоп!\n\nВыберите свой знак зодиака через /setmyhoroscope или используйте /help для списка команд.",
@@ -163,6 +177,15 @@ bot.onText(/\/setmyhoroscope/, (msg) => {
 // /settime
 bot.onText(/\/settime/, (msg) => {
   const user = users[msg.from.id];
+  if (msg.from && msg.from.username) {
+    users[msg.from.id] = users[msg.from.id] || {
+      sign: null,
+      subscribed: false,
+      notificationTime: "08:00",
+    };
+    users[msg.from.id].username = msg.from.username;
+    saveUsers();
+  }
   const currentTime = user ? user.notificationTime || "08:00" : "08:00";
 
   bot.sendMessage(
@@ -187,6 +210,9 @@ bot.on("callback_query", async (query) => {
       notificationTime: "08:00",
     };
     users[userId].sign = sign;
+    if (query.from && query.from.username) {
+      users[userId].username = query.from.username;
+    }
     saveUsers(); // Сохраняем изменения
     bot.answerCallbackQuery(query.id, { text: "Знак сохранён!" });
     bot.sendMessage(
@@ -205,6 +231,9 @@ bot.on("callback_query", async (query) => {
       notificationTime: "08:00",
     };
     users[userId].notificationTime = time;
+    if (query.from && query.from.username) {
+      users[userId].username = query.from.username;
+    }
     saveUsers(); // Сохраняем изменения
     bot.answerCallbackQuery(query.id, { text: "Время сохранено!" });
     bot.sendMessage(
@@ -225,7 +254,8 @@ bot.onText(/\/today/, async (msg) => {
   }
   const signObj = SIGNS.find((s) => s.value === user.sign);
   const desc = getHoroscope(user.sign);
-  bot.sendMessage(msg.chat.id, `*${signObj.name}*\n${desc}`, {
+  const date = getMoscowDateString();
+  bot.sendMessage(msg.chat.id, `*${signObj.name}*\n📅 ${date}\n${desc}`, {
     parse_mode: "Markdown",
   });
 });
@@ -237,6 +267,9 @@ bot.onText(/\/subscribe/, (msg) => {
     subscribed: false,
     notificationTime: "08:00",
   };
+  if (msg.from && msg.from.username) {
+    users[msg.from.id].username = msg.from.username;
+  }
   if (!users[msg.from.id].sign) {
     bot.sendMessage(msg.chat.id, "Сначала выберите знак через /setmyhoroscope");
     return;
@@ -257,6 +290,9 @@ bot.onText(/\/unsubscribe/, (msg) => {
     subscribed: false,
     notificationTime: "08:00",
   };
+  if (msg.from && msg.from.username) {
+    users[msg.from.id].username = msg.from.username;
+  }
   users[msg.from.id].subscribed = false;
   saveUsers(); // Сохраняем изменения
   scheduleUserNotifications(); // Обновляем расписание
@@ -292,11 +328,12 @@ bot.onText(/\/all/, async (msg) => {
     texts.push(`*${s.name}*: ${desc}`);
   }
   // Разбиваем на сообщения по 3500 символов (чтобы не превышать лимит Telegram)
-  let message = "";
+  const header = `*Гороскоп на ${getMoscowDateString()}*`;
+  let message = header;
   for (const t of texts) {
     if ((message + "\n\n" + t).length > 3500) {
       await bot.sendMessage(msg.chat.id, message, { parse_mode: "Markdown" });
-      message = t;
+      message = header + "\n\n" + t;
     } else {
       message += (message ? "\n\n" : "") + t;
     }
@@ -326,7 +363,8 @@ function scheduleUserNotifications() {
           try {
             const signObj = SIGNS.find((s) => s.value === user.sign);
             const desc = getHoroscope(user.sign);
-            await bot.sendMessage(userId, `*${signObj.name}*\n${desc}`, {
+            const date = getMoscowDateString();
+            await bot.sendMessage(userId, `*${signObj.name}*\n📅 ${date}\n${desc}`, {
               parse_mode: "Markdown",
             });
             console.log(
