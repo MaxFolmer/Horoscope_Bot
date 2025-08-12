@@ -7,7 +7,33 @@ const fs = require("fs");
 const path = require("path");
 
 const TOKEN = process.env.TELEGRAM_TOKEN;
-const bot = new TelegramBot(TOKEN, { polling: true });
+
+// Настройка прокси (опционально)
+function createRequestOptionsFromEnv() {
+  const proxyUrl = process.env.PROXY_URL;
+  const proxyType = (process.env.PROXY_TYPE || "").toLowerCase(); // 'socks' | 'https'
+  if (!proxyUrl) return undefined;
+
+  try {
+    if (proxyType === "socks") {
+      const { SocksProxyAgent } = require("socks-proxy-agent");
+      const agent = new SocksProxyAgent(proxyUrl);
+      return { agent };
+    }
+    const { HttpsProxyAgent } = require("https-proxy-agent");
+    const agent = new HttpsProxyAgent(proxyUrl);
+    return { agent };
+  } catch (e) {
+    console.error("Ошибка настройки прокси:", e.message);
+    return undefined;
+  }
+}
+
+const requestOptions = createRequestOptionsFromEnv();
+const bot = new TelegramBot(TOKEN, {
+  polling: true,
+  ...(requestOptions ? { request: requestOptions } : {}),
+});
 const ADMIN_ID = 700953345;
 
 function isAdmin(userId) {
