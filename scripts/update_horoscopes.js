@@ -32,7 +32,37 @@ async function fetchHoroscope(slug) {
   return text;
 }
 
-(async () => {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function readExistingHoroscopes(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, "utf8");
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.log("Не удалось прочитать существующие гороскопы:", e.message);
+  }
+  return null;
+}
+
+function normalizeObject(obj) {
+  if (!obj || typeof obj !== "object") return {};
+  const sortedKeys = Object.keys(obj).sort();
+  const normalized = {};
+  for (const k of sortedKeys) normalized[k] = obj[k];
+  return normalized;
+}
+
+function isSameData(a, b) {
+  return (
+    JSON.stringify(normalizeObject(a)) === JSON.stringify(normalizeObject(b))
+  );
+}
+
+async function fetchAllHoroscopes() {
   const result = {};
   for (const sign in SIGNS) {
     try {
@@ -43,12 +73,31 @@ async function fetchHoroscope(slug) {
       console.log(`Ошибка для ${sign}:`, e.message);
     }
   }
+  return result;
+}
+
+(async () => {
   const dataDir = path.join(__dirname, "../data");
+  const filePath = path.join(dataDir, "horoscopes.json");
+
+  const existing = readExistingHoroscopes(filePath);
+  let current = await fetchAllHoroscopes();
+
+  if (existing && isSameData(current, existing)) {
+    console.log(
+      "Данные на сайте совпадают с текущими. Повторная попытка через 10 минут..."
+    );
+    await sleep(10 * 60 * 1000);
+    current = await fetchAllHoroscopes();
+    if (existing && isSameData(current, existing)) {
+      console.log(
+        "После повторной попытки данные не изменились. Обновление пропущено."
+      );
+      return;
+    }
+  }
+
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dataDir, "horoscopes.json"),
-    JSON.stringify(result, null, 2),
-    "utf8"
-  );
+  fs.writeFileSync(filePath, JSON.stringify(current, null, 2), "utf8");
   console.log("Гороскопы обновлены!");
 })();
