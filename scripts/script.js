@@ -155,6 +155,15 @@ function getHoroscope(sign) {
   return horoscopes[sign] || "Гороскоп не найден!";
 }
 
+async function sendSafe(chatId, text, options) {
+  try {
+    return await bot.sendMessage(chatId, text, options);
+  } catch (e) {
+    console.error("Ошибка отправки (fallback без Markdown):", e.message);
+    return await bot.sendMessage(chatId, text);
+  }
+}
+
 function getMoscowDateString() {
   try {
     return new Date().toLocaleDateString("ru-RU", {
@@ -287,7 +296,7 @@ bot.onText(/\/today/, async (msg) => {
 });
 
 // /subscribe
-bot.onText(/\/subscribe/, (msg) => {
+bot.onText(/\/subscribe/, async (msg) => {
   users[msg.from.id] = users[msg.from.id] || {
     sign: null,
     subscribed: false,
@@ -297,24 +306,22 @@ bot.onText(/\/subscribe/, (msg) => {
     users[msg.from.id].username = msg.from.username;
   }
   if (!users[msg.from.id].sign) {
-    bot.sendMessage(msg.chat.id, "Сначала выберите знак через /setmyhoroscope");
+    await sendSafe(msg.chat.id, "Сначала выберите знак через /setmyhoroscope");
     return;
   }
   users[msg.from.id].subscribed = true;
   saveUsers(); // Сохраняем изменения
   scheduleUserNotifications(); // Обновляем расписание
   const time = users[msg.from.id].notificationTime || "08:00";
-  bot.sendMessage(
+  await sendSafe(
     msg.chat.id,
     `✅ Вы подписаны на ежедневную рассылку!\nЕжедневно в *${time}* по Москве`,
-    {
-      parse_mode: "Markdown",
-    }
+    { parse_mode: "Markdown" }
   );
 });
 
 // /unsubscribe
-bot.onText(/\/unsubscribe/, (msg) => {
+bot.onText(/\/unsubscribe/, async (msg) => {
   users[msg.from.id] = users[msg.from.id] || {
     sign: null,
     subscribed: false,
@@ -326,7 +333,7 @@ bot.onText(/\/unsubscribe/, (msg) => {
   users[msg.from.id].subscribed = false;
   saveUsers(); // Сохраняем изменения
   scheduleUserNotifications(); // Обновляем расписание
-  bot.sendMessage(msg.chat.id, "❌ Вы отписались от рассылки.");
+  await sendSafe(msg.chat.id, "❌ Вы отписались от рассылки.");
 });
 
 // /stats - статистика пользователей (для админа)
