@@ -304,9 +304,13 @@ bot.onText(/\/subscribe/, (msg) => {
   saveUsers(); // Сохраняем изменения
   scheduleUserNotifications(); // Обновляем расписание
   const time = users[msg.from.id].notificationTime || "08:00";
-  bot.sendMessage(msg.chat.id, `✅ Вы подписаны на ежедневную рассылку!\nЕжедневно в *${time}* по Москве`, {
-    parse_mode: "Markdown",
-  });
+  bot.sendMessage(
+    msg.chat.id,
+    `✅ Вы подписаны на ежедневную рассылку!\nЕжедневно в *${time}* по Москве`,
+    {
+      parse_mode: "Markdown",
+    }
+  );
 });
 
 // /unsubscribe
