@@ -176,6 +176,9 @@ function getMoscowDateString() {
 
 // /start
 bot.onText(/\/start/, (msg) => {
+  console.log(
+    `[CMD] /start from ${msg.from.id} (@${msg.from.username || "-"})`
+  );
   users[msg.from.id] = users[msg.from.id] || { sign: null, subscribed: false };
   if (msg.from && msg.from.username) {
     users[msg.from.id].username = msg.from.username;
@@ -297,6 +300,9 @@ bot.onText(/\/today/, async (msg) => {
 
 // /subscribe
 bot.onText(/\/subscribe/, async (msg) => {
+  console.log(
+    `[CMD] /subscribe from ${msg.from.id} (@${msg.from.username || "-"})`
+  );
   users[msg.from.id] = users[msg.from.id] || {
     sign: null,
     subscribed: false,
@@ -318,10 +324,14 @@ bot.onText(/\/subscribe/, async (msg) => {
     `✅ Вы подписаны на ежедневную рассылку!\nЕжедневно в *${time}* по Москве`,
     { parse_mode: "Markdown" }
   );
+  console.log(`[INFO] User ${msg.from.id} subscribed with time ${time}`);
 });
 
 // /unsubscribe
 bot.onText(/\/unsubscribe/, async (msg) => {
+  console.log(
+    `[CMD] /unsubscribe from ${msg.from.id} (@${msg.from.username || "-"})`
+  );
   users[msg.from.id] = users[msg.from.id] || {
     sign: null,
     subscribed: false,
@@ -334,6 +344,7 @@ bot.onText(/\/unsubscribe/, async (msg) => {
   saveUsers(); // Сохраняем изменения
   scheduleUserNotifications(); // Обновляем расписание
   await sendSafe(msg.chat.id, "❌ Вы отписались от рассылки.");
+  console.log(`[INFO] User ${msg.from.id} unsubscribed`);
 });
 
 // /stats - статистика пользователей (для админа)
@@ -466,3 +477,8 @@ cron.schedule(
 );
 
 console.log("Автообновление гороскопов настроено на 00:30 по Москве");
+
+// Логирование ошибок polling, чтобы диагностировать проблемы получения апдейтов
+bot.on("polling_error", (err) => {
+  console.error("[polling_error]", err);
+});
