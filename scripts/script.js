@@ -465,6 +465,9 @@ cron.schedule(
       (err, stdout, stderr) => {
         if (err) {
           console.error("Ошибка автообновления гороскопов:", err);
+          // Уведомляем админа об ошибке автообновления
+          const message = `❌ Автообновление не удалось\nОшибка: ${err.message}`;
+          sendSafe(ADMIN_ID, message).catch(() => {});
         } else {
           console.log("Гороскопы успешно обновлены:", stdout);
           // Перезагружаем данные в памяти
@@ -472,8 +475,18 @@ cron.schedule(
             delete require.cache[require.resolve("../data/horoscopes.json")];
             Object.assign(horoscopes, require("../data/horoscopes.json"));
             console.log("Данные гороскопов перезагружены в памяти");
+            // Информируем админа об исходе обновления
+            const skipped = /не изменились|пропущено/i.test(stdout || "");
+            const status = skipped
+              ? "⚠️ Обновление пропущено (данные не изменились)"
+              : "✅ Автообновление завершено";
+            const tail = (stdout || "").trim().split("\n").slice(-3).join("\n");
+            const msg = [status, tail ? `\n\nЛог:\n${tail}` : ""].join("");
+            sendSafe(ADMIN_ID, msg).catch(() => {});
           } catch (e) {
             console.error("Ошибка перезагрузки данных:", e.message);
+            const message = `❌ Ошибка перезагрузки данных после обновления\n${e.message}`;
+            sendSafe(ADMIN_ID, message).catch(() => {});
           }
         }
       }
