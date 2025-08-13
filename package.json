@@ -14,7 +14,7 @@
   "dependencies": {
     "@vitalets/google-translate-api": "^9.2.1",
     "axios": "^1.6.8",
-    "cheerio": "^1.1.2",
+    "cheerio": "1.0.0-rc.12",
     "dotenv": "^17.2.1",
     "https-proxy-agent": "^7.0.6",
     "node-cron": "^3.0.3",
