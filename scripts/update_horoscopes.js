@@ -1,5 +1,13 @@
 require("dotenv").config();
 const axios = require("axios");
+// В Node 18 axios по умолчанию использует fetch/undici → падает из‑за отсутствия global File.
+// Форсируем старый HTTP-адаптер Node, чтобы обойти проблему.
+try {
+  const httpAdapter = require("axios/lib/adapters/http");
+  axios.defaults.adapter = httpAdapter;
+} catch (_) {
+  // игнорируем, если путь адаптера отличается — ниже в запросах можно будет переопределять при необходимости
+}
 const cheerio = require("cheerio");
 const fs = require("fs");
 const path = require("path");
