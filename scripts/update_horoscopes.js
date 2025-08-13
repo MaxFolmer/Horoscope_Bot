@@ -1,5 +1,5 @@
 require("dotenv").config();
-const axios = require("axios");
+const https = require("https");
 const cheerio = require("cheerio");
 const fs = require("fs");
 const path = require("path");
@@ -31,13 +31,41 @@ function getAxiosHttpAdapter() {
   return undefined;
 }
 
+function fetchUrl(url) {
+  const options = {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  };
+  return new Promise((resolve, reject) => {
+    https
+      .get(url, options, (res) => {
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          // Follow redirect
+          const redirectUrl = res.headers.location.startsWith("http")
+            ? res.headers.location
+            : new URL(res.headers.location, url).href;
+          res.resume();
+          return resolve(fetchUrl(redirectUrl));
+        }
+        if (res.statusCode && res.statusCode >= 400) {
+          return reject(new Error(`HTTP ${res.statusCode}`));
+        }
+        const chunks = [];
+        res.on("data", (c) => chunks.push(c));
+        res.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+      })
+      .on("error", reject)
+      .setTimeout(20000, function () {
+        this.destroy(new Error("Request timeout"));
+      });
+  });
+}
+
 async function fetchHoroscope(slug) {
   const url = `${BASE_URL}${slug}/day.html`;
-  const httpAdapter = getAxiosHttpAdapter();
-  const { data } = await axios.get(url, {
-    headers: { "User-Agent": "Mozilla/5.0" },
-    ...(httpAdapter ? { adapter: httpAdapter } : {}),
-  });
+  const data = await fetchUrl(url);
   const $ = cheerio.load(data);
   // Берём первый параграф на странице
   const text = $("p").first().text().trim();
