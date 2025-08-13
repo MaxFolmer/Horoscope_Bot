@@ -34,27 +34,10 @@ function getAxiosHttpAdapter() {
 async function fetchHoroscope(slug) {
   const url = `${BASE_URL}${slug}/day.html`;
   const httpAdapter = getAxiosHttpAdapter();
-  let data;
-  if (httpAdapter) {
-    ({ data } = await axios.get(url, {
-      headers: { "User-Agent": "Mozilla/5.0" },
-      adapter: httpAdapter,
-    }));
-  } else {
-    // Жёсткий обход: временно выключаем global fetch, чтобы axios переключился на http/https
-    const prevFetch = globalThis.fetch;
-    try {
-      // eslint-disable-next-line no-global-assign
-      globalThis.fetch = undefined;
-      ({ data } = await axios.get(url, {
-        headers: { "User-Agent": "Mozilla/5.0" },
-      }));
-    } finally {
-      // Восстанавливаем
-      // eslint-disable-next-line no-global-assign
-      globalThis.fetch = prevFetch;
-    }
-  }
+  const { data } = await axios.get(url, {
+    headers: { "User-Agent": "Mozilla/5.0" },
+    ...(httpAdapter ? { adapter: httpAdapter } : {}),
+  });
   const $ = cheerio.load(data);
   // Берём первый параграф на странице
   const text = $("p").first().text().trim();
