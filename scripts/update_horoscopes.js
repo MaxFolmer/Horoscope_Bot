@@ -1,13 +1,5 @@
 require("dotenv").config();
 const axios = require("axios");
-// В Node 18 axios по умолчанию использует fetch/undici → падает из‑за отсутствия global File.
-// Форсируем старый HTTP-адаптер Node, чтобы обойти проблему.
-try {
-  const httpAdapter = require("axios/lib/adapters/http");
-  axios.defaults.adapter = httpAdapter;
-} catch (_) {
-  // игнорируем, если путь адаптера отличается — ниже в запросах можно будет переопределять при необходимости
-}
 const cheerio = require("cheerio");
 const fs = require("fs");
 const path = require("path");
@@ -29,11 +21,40 @@ const SIGNS = {
 
 const BASE_URL = "https://www.astrostar.ru/horoscopes/main/";
 
+function getAxiosHttpAdapter() {
+  try {
+    return require("axios/lib/adapters/http");
+  } catch (_) {}
+  try {
+    return require("axios/adapters/http");
+  } catch (_) {}
+  return undefined;
+}
+
 async function fetchHoroscope(slug) {
   const url = `${BASE_URL}${slug}/day.html`;
-  const { data } = await axios.get(url, {
-    headers: { "User-Agent": "Mozilla/5.0" },
-  });
+  const httpAdapter = getAxiosHttpAdapter();
+  let data;
+  if (httpAdapter) {
+    ({ data } = await axios.get(url, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      adapter: httpAdapter,
+    }));
+  } else {
+    // Жёсткий обход: временно выключаем global fetch, чтобы axios переключился на http/https
+    const prevFetch = globalThis.fetch;
+    try {
+      // eslint-disable-next-line no-global-assign
+      globalThis.fetch = undefined;
+      ({ data } = await axios.get(url, {
+        headers: { "User-Agent": "Mozilla/5.0" },
+      }));
+    } finally {
+      // Восстанавливаем
+      // eslint-disable-next-line no-global-assign
+      globalThis.fetch = prevFetch;
+    }
+  }
   const $ = cheerio.load(data);
   // Берём первый параграф на странице
   const text = $("p").first().text().trim();
