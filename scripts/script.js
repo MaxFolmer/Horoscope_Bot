@@ -395,7 +395,15 @@ bot.onText(/\/all/, async (msg) => {
 function scheduleUserNotifications() {
   // Очищаем старые расписания
   if (global.userSchedules) {
-    Object.values(global.userSchedules).forEach((job) => job.cancel());
+    Object.values(global.userSchedules).forEach((job) => {
+      try {
+        if (!job) return;
+        if (typeof job.stop === "function") job.stop();
+        if (typeof job.destroy === "function") job.destroy();
+      } catch (e) {
+        console.error("Ошибка остановки расписания:", e.message);
+      }
+    });
   }
   global.userSchedules = {};
 
